@@ -41,5 +41,5 @@ After the training that takes 1000 iteration the mice will go toward the lever a
 # Mouse trap game intermediate
 
 ```
-Know the lever generates food on a random cell
+Now the lever generates food on a random cell
 ```
