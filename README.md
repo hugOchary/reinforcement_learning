@@ -38,8 +38,12 @@ the Q-table contains the previously described states with for each 4 possible ac
 
 After the training that takes 1000 iteration the mice will go toward the lever as intended. I need know to add a degree of complexity to this model.
 
+I added traps in the game and arguments to customize the training, see ```--help``` for more details.
+
 # Mouse trap game intermediate
 
 ```
-Now the lever generates food on a random cell
+    Now the lever generates food on a random cell, with no traps
 ```
+
+This model poses the problem of representing a dynamic environment.
