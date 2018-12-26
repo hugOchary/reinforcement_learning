@@ -15,6 +15,7 @@ WHITE = (255,255,255)
 BLACK = (0,0,0)
 RED = (255,0,0)
 BLUE = (0,0,255)
+GREEN = (0,255,0)
 GREY = (100, 100, 100)
 SCREENRECT = pygame.Rect(0,0,640,480)
 SCORE = 0
@@ -41,12 +42,21 @@ class MouseTrap:
         if self.grid[self.position[0]][self.position[1]] == 10:
             return 1
         self.score = 0
+        # We handle the stepping on a trap
+        if self.grid[self.position[0]][self.position[1]] == -self.reward_strategy:
+            return 1
         # we update the energy and score
         old_energy = self.energy
         self.energy += self.grid[self.position[0]][self.position[1]]
         self.score = (self.energy-old_energy) - (self.energy > 0)
         return int(self.energy < 0)
 
+    def pick_trap(self, taken_positions):
+        new_position = [randrange(self.height), randrange(self.width)]
+        if new_position not in taken_positions:
+            return new_position
+        else:
+            return self.pick_trap(taken_positions)
     
     def init_grid(self, width, height):
         '''
@@ -55,11 +65,20 @@ class MouseTrap:
         self.width = width
         self.height = height
         ## this simplified version uses a fixed lever and no food
-        self.lever_position = [(self.height-1)//2, (self.width-1)//2]
+        self.lever_position = [randrange(self.height), randrange(self.width)]
         grid = [
             [ self.decay_rate for i in range(width)] for j in range(height)
         ]
         grid[self.lever_position[0]][self.lever_position[1]] = 10
+
+        # We now add some traps to the map
+        taken_positions = [self.lever_position]
+        for i in range(6):
+            taken_positions.append(self.pick_trap(taken_positions))
+        taken_positions.pop(0)
+        for position in taken_positions:
+            grid[position[0]][position[1]] = -self.reward_strategy
+
         self.grid = grid
 
     def move(self, arg):
@@ -91,6 +110,8 @@ class MouseTrap:
             return WHITE
         elif cell_value == self.reward_strategy:
             return RED
+        elif cell_value == -self.reward_strategy:
+            return GREEN
         elif cell_value == 0:
             return BLUE
     
