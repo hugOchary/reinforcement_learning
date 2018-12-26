@@ -1,7 +1,17 @@
+import argparse
 from random import randrange
 
 import pygame
 from pygame.locals import *
+
+# Argument parsing
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--n_training', type=int, default=1000, help='number of training the player will go through')
+parser.add_argument('--traps', type=bool, default=True, help='Do we use traps in the game')
+parser.add_argument('--n_traps', type=int, default=6, help='Number of traps to use in the game')
+parser.add_argument('--rnd_lever', type=bool, default=True, help='Is the lever position set randomly')
+opt = parser.parse_args()
 
 # pygame constants intialisation
 
@@ -39,11 +49,12 @@ class MouseTrap:
             food_position = (randrange(self.height), randrange(self.width))
             while food_position == self.lever_position:
                 food_position = (randrange(self.height), randrange(self.width))
-            self.grid[randrange(self.height)][randrange(self.width)] = self.reward_strategy
+            self.grid[food_position[0]][food_position[1]] = self.reward_strategy
         
         # We handle the stepping on a trap
         if self.grid[self.position[0]][self.position[1]] == -self.reward_strategy:
             self.energy = 0
+        
         # we update the energy and score
         old_energy = self.energy
         self.energy += self.grid[self.position[0]][self.position[1]]
@@ -53,7 +64,7 @@ class MouseTrap:
             self.grid[self.position[0]][self.position[1]] = self.decay_rate
 
     def pick_trap(self, taken_positions):
-        new_position = [randrange(self.height), randrange(self.width)]
+        new_position = (randrange(self.height), randrange(self.width))
         if new_position not in taken_positions:
             return new_position
         else:
@@ -65,19 +76,22 @@ class MouseTrap:
         '''
         self.width = width
         self.height = height
-        self.lever_position = (randrange(height), randrange(width))
+        self.lever_position = (self.height//2, self.width//2)
+        if opt.rnd_lever:    
+            self.lever_position = (randrange(height), randrange(width))
         grid = [
             [ self.decay_rate for i in range(width)] for j in range(height)
         ]
         grid[self.lever_position[0]][self.lever_position[1]] = 0
 
         # We now add some traps to the map
-        taken_positions = [self.lever_position]
-        for i in range(6):
-            taken_positions.append(self.pick_trap(taken_positions))
-        taken_positions.pop(0)
-        for position in taken_positions:
-            grid[position[0]][position[1]] = -self.reward_strategy
+        if opt.traps:    
+            taken_positions = [self.lever_position]
+            for i in range(opt.n_traps):
+                taken_positions.append(self.pick_trap(taken_positions))
+            taken_positions.pop(0)
+            for position in taken_positions:
+                grid[position[0]][position[1]] = -self.reward_strategy
         self.grid = grid
 
     def move(self, arg):

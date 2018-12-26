@@ -1,3 +1,4 @@
+import argparse
 from random import randrange
 
 # path setup
@@ -8,6 +9,16 @@ from mouseTrapQLearner import QLearner
 
 import pygame
 from pygame.locals import *
+
+# Argument parsing
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--n_training', type=int, default=1000, help='number of training the player will go through')
+parser.add_argument('--n_play', type=int, default=20, help='number of play the player will go through after training')
+parser.add_argument('--traps', type=bool, default=True, help='Do we use traps in the game')
+parser.add_argument('--n_traps', type=int, default=6, help='Number of traps to use in the game')
+parser.add_argument('--rnd_lever', type=bool, default=True, help='Is the lever position set randomly')
+opt = parser.parse_args()
 
 # pygame constants intialisation
 
@@ -64,20 +75,24 @@ class MouseTrap:
         '''
         self.width = width
         self.height = height
-        ## this simplified version uses a fixed lever and no food
-        self.lever_position = [randrange(self.height), randrange(self.width)]
+
+        # We init the lever position and the grid
+        self.lever_position = (self.height//2, self.width//2)
+        if opt.rnd_lever:    
+            self.lever_position = (randrange(height), randrange(width))
         grid = [
             [ self.decay_rate for i in range(width)] for j in range(height)
         ]
         grid[self.lever_position[0]][self.lever_position[1]] = 10
 
         # We now add some traps to the map
-        taken_positions = [self.lever_position]
-        for i in range(6):
-            taken_positions.append(self.pick_trap(taken_positions))
-        taken_positions.pop(0)
-        for position in taken_positions:
-            grid[position[0]][position[1]] = -self.reward_strategy
+        if opt.traps:
+            taken_positions = [self.lever_position]
+            for i in range(opt.n_traps):
+                taken_positions.append(self.pick_trap(taken_positions))
+            taken_positions.pop(0)
+            for position in taken_positions:
+                grid[position[0]][position[1]] = -self.reward_strategy
 
         self.grid = grid
 
@@ -195,7 +210,7 @@ def main():
     #Initialisation of QLearner
     player = QLearner((mouseTrapGame.height, mouseTrapGame.width), mouseTrapGame.grid)
 
-    for i in range(1000):
+    for i in range(opt.n_training):
 
         mouseTrapGame.reset()
 
@@ -217,7 +232,9 @@ def main():
     #Initialisation of the screen
     mouseTrapGame.draw(screen)
     pygame.display.update()
-    for i in range(100):
+
+    player.set_to_play()
+    for i in range(opt.n_play):
         
         mouseTrapGame.reset()
         play(player, mouseTrapGame, screen, clock)

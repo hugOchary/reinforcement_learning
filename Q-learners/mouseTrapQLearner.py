@@ -64,6 +64,9 @@ class QLearner:
     def decrease_exploration(self, rate = 0.99):
         self.exploration_rate *= rate
     
+    def set_to_play(self):
+        self.exploration_rate = 0
+    
     def __str__(self):
         result = ""
         for index, l in enumerate(self.qTable):
