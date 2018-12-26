@@ -1,5 +1,11 @@
 from random import randrange
 
+# path setup
+import sys
+sys.path.insert(0, '../../Q-learners/')
+
+from mouseTrapQLearner import QLearner
+
 import pygame
 from pygame.locals import *
 
@@ -23,7 +29,6 @@ class MouseTrap:
         self.width = None
         self.position = starting_position
         self.energy = energy
-        self.score = 0
         self.decay_rate = decay_rate
         self.reward_strategy = reward_strategy
         self.lever_position =None
@@ -33,31 +38,28 @@ class MouseTrap:
         Compute the evolution of the energy and score of the game
         according to its position.
         '''
-        if self.grid[self.position[0]][self.position[1]] == 0:
-            food_position = (randrange(self.height), randrange(self.width))
-            while food_position == self.lever_position:
-                food_position = (randrange(self.height), randrange(self.width))
-            self.grid[randrange(self.height)][randrange(self.width)] = self.reward_strategy
+        if self.grid[self.position[0]][self.position[1]] == 10:
+            return 1
+        self.score = 0
         # we update the energy and score
         old_energy = self.energy
         self.energy += self.grid[self.position[0]][self.position[1]]
-        self.score = (self.energy-old_energy) - (self.energy > 0)*1000
-        # we set the cell energy to 0
-        if self.grid[self.position[0]][self.position[1]] == self.reward_strategy:
-            self.grid[self.position[0]][self.position[1]] = self.decay_rate
+        self.score = (self.energy-old_energy) - (self.energy > 0)
+        return int(self.energy < 0)
 
     
-    def init_grid(self, nb_of_lever, width, height):
+    def init_grid(self, width, height):
         '''
         Init the grid cells with a lever
         '''
         self.width = width
         self.height = height
-        self.lever_position = (randrange(height), randrange(width))
+        ## this simplified version uses a fixed lever and no food
+        self.lever_position = [(self.height-1)//2, (self.width-1)//2]
         grid = [
             [ self.decay_rate for i in range(width)] for j in range(height)
         ]
-        grid[self.lever_position[0]][self.lever_position[1]] = 0
+        grid[self.lever_position[0]][self.lever_position[1]] = 10
         self.grid = grid
 
     def move(self, arg):
@@ -78,7 +80,8 @@ class MouseTrap:
         '''
         if arg != None:
             self.move(arg)
-            self.step()
+            return self.step()
+
     
     def pick_color(self, cell_value):
         '''
@@ -90,6 +93,13 @@ class MouseTrap:
             return RED
         elif cell_value == 0:
             return BLUE
+    
+    def reset(self):
+        self.position = [randrange(self.height) ,randrange(self.width)]
+        while self.position == self.lever_position:
+            self.position = [randrange(self.height) ,randrange(self.width)]
+        self.energy = 100
+        self.score = 0
 
     def draw(self, screen):
         '''
@@ -112,49 +122,84 @@ def wait():
             if (event.type == KEYDOWN and event.key in ALLOWEDMOVE):
                 return pygame.key.get_pressed()
 
+def training(player, mouseTrapGame):
+
+    terminate = 0
+
+    while terminate == 0:
+
+        # we save the state before play
+        former_position = [mouseTrapGame.position[0], mouseTrapGame.position[1]]
+        move = player.decision(former_position)
+        new_position = mouseTrapGame.position
+
+        # we play according to the player's choice
+        terminate = mouseTrapGame.next(move)
+        
+        # We update the player
+        player.update_QTable(former_position,
+            mouseTrapGame.grid[mouseTrapGame.position[0]][mouseTrapGame.position[1]],
+            mouseTrapGame.position)
+        
+
+    return player
+
+def play(player, mouseTrapGame, screen, clock):
+
+    terminate = 0
+    print(mouseTrapGame.position)
+
+    while terminate == 0:
+
+        # we save the state before play
+        former_position = [mouseTrapGame.position[0], mouseTrapGame.position[1]]
+        move = player.decision(former_position)
+
+        # we play according to the player's choice
+        terminate = mouseTrapGame.next(move)
+
+        # we update the screen
+        mouseTrapGame.draw(screen)
+        pygame.display.update()
+        clock.tick(10)
+        
+    
+
 def main():
+    
+    #Initialization of our game
+    mouseTrapGame = MouseTrap()
+    mouseTrapGame.init_grid(10, 10)
+
+    #Initialisation of QLearner
+    player = QLearner((mouseTrapGame.height, mouseTrapGame.width), mouseTrapGame.grid)
+
+    for i in range(1000):
+
+        mouseTrapGame.reset()
+
+        player = training(player, mouseTrapGame)
+        player.decrease_exploration()
+    
+    print(player)
+    
     #initializing pygame
     pygame.init()
     clock = pygame.time.Clock()
 
+    
     #initializing screen
     winstyle = 0  # |FULLSCREEN
     bestdepth = pygame.display.mode_ok(SCREENRECT.size, winstyle, 32)
     screen = pygame.display.set_mode(SCREENRECT.size, winstyle, bestdepth)
 
-    #Initialization of our game
-    mouseTrapGame = MouseTrap()
-    mouseTrapGame.init_grid(3, 10, 10)
-
     #Initialisation of the screen
     mouseTrapGame.draw(screen)
     pygame.display.update()
-
-    while mouseTrapGame.energy > 0:
-
-        # move initialization
-        move = None
-
-        #Event handling
-        keystate = wait()
-
-        #Event conversion:
-
-        x = keystate[K_RIGHT] - keystate[K_LEFT]
-        y = keystate[K_DOWN] - keystate[K_UP]
-        if (y != 0 or x != 0):
-            move = (x,y)
-
-        # We compute the new state of the game
-        mouseTrapGame.next(move)
-
-        # we draw the new state of the game on the screen
-        mouseTrapGame.draw(screen)
-        pygame.display.update()
-
-        clock.tick(25)
-    
-    print("The player died, thank you for playing")
+    for i in range(100):
+        
+        mouseTrapGame.reset()
+        play(player, mouseTrapGame, screen, clock)
 
 if __name__ == '__main__' :
     main()
