@@ -1,0 +1,1 @@
+from gym_mouseTrap.envs.mouseTrap_env import MouseTrapEnv
