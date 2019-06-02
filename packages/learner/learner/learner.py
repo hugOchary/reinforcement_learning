@@ -10,5 +10,5 @@ class Learner(ABC):
     # play related methods
 
     @abstractmethod
-    def choseAction(self):
+    def choseAction(self, nb_action, steps_done):
         pass

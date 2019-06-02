@@ -52,7 +52,7 @@ for episode in range(num_episodes):
         # Add new reward 
         state = new_state
         rewards_current_episode += reward 
-        if done == True: 
+        if done == True:
             break
     # Exploration rate decay   
     exploration_rate = min_exploration_rate + (max_exploration_rate - min_exploration_rate) * np.exp(-exploration_decay_rate*episode)   

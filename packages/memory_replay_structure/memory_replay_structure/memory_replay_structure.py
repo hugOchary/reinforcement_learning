@@ -31,3 +31,7 @@ class MemoryReplayStructure:
 
     def __len__(self):  
         return len(self.memory)
+
+    def displayMemory(self):
+        for transition in self.memory:
+            print("action chosen : ", transition.action.item(), " reward obtained : ", transition.reward.item())
